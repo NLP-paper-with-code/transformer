@@ -212,7 +212,6 @@ class Transformer(nn.Module):
   def _make_source_mask(self, source):
     # [batch_size, 1, 1, source_len]
     source_mask = (source != self.source_padding_index).unsqueeze(1).unsqueeze(2)
-    
     return source_mask.to(self.device)
 
   def _make_target_mask(self, target):
