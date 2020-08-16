@@ -73,7 +73,6 @@ class Encoder(nn.Module):
     batch_size, source_len = x.shape
     
     positions = torch.arange(0, source_len).expand(batch_size, source_len).to(self.device)
-    
     # Embedded source
     out = self.dropout((self.word_embedding(x) + self.position_embedding(x)))
     # In encoder, value, query, key are all the same
@@ -216,9 +215,11 @@ class Transformer(nn.Module):
 
   def _make_target_mask(self, target):
     batch_size, target_len = target.shape
-    target_mask = torch.tril(torch.ones((target_len, target_len))).expand(
-      batch_size, 1, target_len, target_len,
-    )
+    # [batch_size, 1, 1, target_len]
+    target_mask = (target != self.target_padding_index).unsqueeze(1).unsqueeze(2)
+    target_sub_mask = torch.tril(torch.ones((target_len, target_len))).bool().to(self.device)
+    # [batch_size, 1, target_len, target_len]
+    target_mask = target_mask & target_sub_mask
 
     return target_mask.to(self.device)
 
@@ -226,6 +227,7 @@ class Transformer(nn.Module):
     source_mask = self._make_source_mask(source)
     target_mask = self._make_target_mask(target)
     encoder_output = self.encoder(x=source, mask=source_mask)
+
     out = self.decoder(
       target=target,
       encoder_output=encoder_output,

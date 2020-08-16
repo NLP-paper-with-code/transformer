@@ -39,24 +39,21 @@ class MultiHeadAttention(nn.Module):
     # value: [batch_size, value_len, number_of_heads, head_dimension]
     # attention: [batch_size, number_of_heads, query_len, key_len]
     attention = torch.einsum('bqhd,bkhd->bhqk', [queries, keys])
-
     # Mask padded indices, so their weights to be 0
     if mask is not None:
       attention = attention.masked_fill(mask == 0, float('-1e20'))
-
     # Normalize attention
     # attention: [batch_size, number_of_heads, query_len, key_len]
     attention /= self.embedding_size ** 0.5
     attention = torch.softmax(attention, dim=3)
 
+    # value: [batch_size, value_len, number_of_heads, head_dimension]
+    # out: [batch_size, query_len, number_of_heads, head_dimension]
     out = torch.einsum('bhql,blhd->bqhd', [attention, values]).reshape(
       batch_size, query_len, self.number_of_heads * self.head_dimension
     )
-    
-    # attention: [batch_size, number_of_heads, query_len, key_len]
-    # value: [batch_size, value_len, number_of_heads, head_dimension]
-    # out: [batch_size, query_len, number_of_heads, head_dimension]
 
+    # out: [batch_size, query_len, embedding_size]
     out = self.full_connection(out)
 
     return out
