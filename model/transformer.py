@@ -74,7 +74,7 @@ class Encoder(nn.Module):
     
     positions = torch.arange(0, source_len).expand(batch_size, source_len).to(self.device)
     # Embedded source
-    out = self.dropout((self.word_embedding(x) + self.position_embedding(x)))
+    out = self.dropout((self.word_embedding(x) + self.position_embedding(positions)))
     # In encoder, value, query, key are all the same
     for layer in self.layers:
       out = layer(query=out, value=out, key=out, mask=mask)
