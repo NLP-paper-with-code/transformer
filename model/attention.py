@@ -1,5 +1,5 @@
-import torch
 import torch.nn as nn
+import torch
 
 class MultiHeadAttention(nn.Module):
   def __init__(self, embedding_size, number_of_heads):
