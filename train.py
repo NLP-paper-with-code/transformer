@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 import torch.nn as nn
 import torch
 
+from typing import Tuple
+
 import math
 import time
 
@@ -20,32 +22,27 @@ class Trainer(object):
     const: Constants,
     model: nn.Module,
     optimizer: torch.optim.Optimizer,
+    criterion,
     train_iterator,
     valid_iterator,
-    device
     ):
 
-    self.device = device
-    self.const = const
-    self.data_loader = data_loader
     self.optimizer = optimizer
+    self.criterion = criterion
+    self.model = model
+    self.const = const
 
     self.train_iterator = train_iterator
     self.valid_iterator = valid_iterator
     
     print(f'The model has {model_utils.count_parameters(model):,} trainable parameters')
 
-    self.criterion = nn.CrossEntropyLoss(ignore_index=TRG_PAD_IDX)
-
-    writer = SummaryWriter(f'runs/loss_plot')
-    step = 0
-
-  def train_step():
+  def train_step(self) -> Tuple[float]:
     self.model.train()
     
     epoch_loss = 0
     
-    for i,batch in enumerate(self.train_iterator):
+    for index, batch in enumerate(self.train_iterator):
         
       src = batch.src
       trg = batch.trg
@@ -61,26 +58,26 @@ class Trainer(object):
 
       loss.backward()
 
-      torch.nn.utils.clip_grad_norm_(model.parameters(), self.const.CLIP)
+      torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.const.CLIP)
 
-      optimizer.step()
+      self.optimizer.step()
       
       epoch_loss += loss.item()
 
-      return epoch_loss / len(iterator), loss
+      return epoch_loss / len(self.train_iterator), loss
 
-  def evaluate_step():
+  def evaluate_step(self) -> float:
     self.model.eval()
     
     epoch_loss = 0
     
     with torch.no_grad():
     
-      for i, batch in enumerate(self.valid_iterator):
+      for index, batch in enumerate(self.valid_iterator):
         src = batch.src
         trg = batch.trg
 
-        output = model(src,trg[:, :-1])    
+        output = self.model(src,trg[:, :-1])    
         output_dim = output.shape[-1]
         
         output = output.contiguous().view(-1, output_dim)
@@ -90,14 +87,15 @@ class Trainer(object):
 
         epoch_loss += loss.item()
 
-    return epoch_loss / len(iterator)
+    return epoch_loss / len(self.valid_iterator)
 
-  def train():
+  def train(self):
+    writer = SummaryWriter(f'runs/loss_plot')
     best_valid_loss = float('inf')
 
     for epoch in range(self.const.NUMBER_OF_EPOCHS):
 
-      checkpoint = {'state_dict': model.state_dict(),'optimizer': optimizer.state_dict()}
+      checkpoint = {'state_dict': self.model.state_dict(),'optimizer': self.optimizer.state_dict()}
       model_utils.save_checkpoint(checkpoint)
 
       start_time = time.time()
@@ -114,7 +112,7 @@ class Trainer(object):
       
       if valid_loss < best_valid_loss:
         best_valid_loss = valid_loss
-        torch.save(model.state_dict(),'checkpoints/model.best.pt')
+        torch.save(self.model.state_dict(),'./checkpoints/model.best.pt')
       
       print(f'Epoch: {epoch+1:02} | Time: {epoch_mins}m {epoch_secs}s')
       print(f'\tTrain Loss: {train_loss:.3f} | Train PPL: {math.exp(train_loss):7.3f}')
@@ -126,5 +124,5 @@ class Trainer(object):
         else:
           print('ending time: \n')
         
-        current_time = time.localtime().strftime('%H:%M:%S',t)
-        print('Local Time : ',current_time)
+        current_time = time.strftime('%H:%M:%S', time.localtime())
+        print('Local Time : ', current_time)
