@@ -1,27 +1,10 @@
-def constant(function):
-  def _set(self, value):
-      raise TypeError
-  def _get(self):
-      return function()
-  return property(_set, _get)
+from dataclasses import dataclass
+from typing import ClassVar
 
-class Constants(object):
-  @constant
-  def BATCH_SIZE() -> int:
-    return 128
-
-  @constant
-  def SEED() -> int:
-    return 1234
-
-  @constant
-  def LEARNING_RATE() -> int:
-    return 0.0005
-
-  @constant
-  def NUMBER_OF_EPOCHS() -> int:
-    return 10
-
-  @constant
-  def CLIP() -> int:
-    return 1
+@dataclass
+class Constants:
+    LEARNING_RATE: int = 0.0005
+    NUMBER_OF_EPOCHS: int = 10
+    BATCH_SIZE: int = 128
+    SEED: int = 1234
+    CLIP: int = 1
