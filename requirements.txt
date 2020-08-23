@@ -3,4 +3,4 @@ matplotlib
 torchtext=0.7.0
 torch
 spacy
-pytz
+dill
