@@ -142,3 +142,7 @@ cython_debug/
 
 # VSCode
 .vscode
+
+# checkpoints
+/checkpoints
+/runs
