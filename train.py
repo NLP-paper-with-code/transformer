@@ -5,6 +5,7 @@ import utility.model as model_utils
 
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
+from tqdm import tqdm
 
 import torch.nn as nn
 import torch
@@ -31,15 +32,16 @@ class Trainer(object):
 
   def train_step(
     self,
+    epoch: int,
     model: nn.Module,
     train_iterator) -> Tuple[float]:
     
     model.train()
     epoch_loss = 0
-    steps = len(train_iterator)
 
-    for step, batch in enumerate(train_iterator):
-      print(f'train: {step}/{steps}')
+    steps = tqdm(enumerate(train_iterator), total=len(train_iterator), leave=False)
+
+    for step, batch in steps:
       
       src = batch.src.to(self.device)
       trg = batch.trg.to(self.device)
@@ -62,10 +64,14 @@ class Trainer(object):
       
       epoch_loss += loss.item()
 
+      steps.set_description(f'Epoch [{epoch}/{self.const.NUMBER_OF_EPOCHS}][train]')
+      steps.set_postfix(loss=epoch_loss / len(train_iterator))
+
     return epoch_loss / len(train_iterator), loss
 
   def evaluate_step(
     self,
+    epoch: int,
     model: nn.Module,
     evaluate_iterator) -> float:
 
@@ -73,10 +79,10 @@ class Trainer(object):
     epoch_loss = 0
     steps = len(evaluate_iterator)
 
-    with torch.no_grad():
-      for step, batch in enumerate(evaluate_iterator):
-        print(f'evaluate: {step}/{steps}')
+    steps = tqdm(enumerate(train_iterator), total=len(train_iterator), leave=False)
 
+    with torch.no_grad():
+      for step, batch in steps:
         src = batch.src.to(self.device)
         trg = batch.trg.to(self.device)
 
@@ -89,6 +95,9 @@ class Trainer(object):
         loss = self.criterion(output, trg)
 
         epoch_loss += loss.item()
+
+        steps.set_description(f'[{epoch}/{self.const.NUMBER_OF_EPOCHS}][evaluate]')
+        steps.set_postfix(loss=epoch_loss / len(evaluate_iterator))
 
     return epoch_loss / len(evaluate_iterator)
 
@@ -106,8 +115,8 @@ class Trainer(object):
 
       start_time = time.time()
 
-      train_loss, loss = self.train_step(model=model, train_iterator=train_iterator)
-      valid_loss = self.evaluate_step(model=model, evaluate_iterator=valid_iterator)
+      train_loss, loss = self.train_step(model=model, epoch=epoch, train_iterator=train_iterator)
+      valid_loss = self.evaluate_step(model=model, epoch=epoch, evaluate_iterator=valid_iterator)
 
       end_time = time.time()
       
@@ -121,8 +130,6 @@ class Trainer(object):
         torch.save(model.state_dict(),'./checkpoints/model.best.pt')
 
       print(f'Epoch: {epoch+1:02} | Time: {epoch_mins}m {epoch_secs}s')
-      print(f'\tTrain Loss: {train_loss:.3f} | Train PPL: {math.exp(train_loss):7.3f}')
-      print(f'\t Val. Loss: {valid_loss:.3f} |  Val. PPL: {math.exp(valid_loss):7.3f}')
 
       if (epoch == 0 or epoch == self.const.NUMBER_OF_EPOCHS):
         if epoch == 0 :
