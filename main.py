@@ -3,12 +3,14 @@ from model.transformer import Transformer
 from constants.constants import Constants
 from train import Trainer
 
+import utility.inference as inference_utils
 import utility.model as model_utils
 
 import torch.optim as optim
 import torch.nn as nn
 import numpy as np
 import torch
+import spacy
 
 from pathlib import Path
 
@@ -53,21 +55,42 @@ if __name__ == '__main__':
     target_vocab_size=TARGET_VOCAB_SIZE,
     source_padding_index=SRC_PAD_IDX,
     target_padding_index=TRG_PAD_IDX,
-    device=device
+    embedding_size=const.EMBEDDING_SIZE,
+    number_of_layers=const.NUMBER_OF_LAYERS,
+    number_of_heads=const.NUMBER_OF_HEADS,
+    forward_expansion=const.FORWARD_EXPANSION,
+    device=device,
   ).to(device)
 
   model.apply(model_utils.initialize_weights)
-
   optimizer = torch.optim.Adam(model.parameters(), lr=const.LEARNING_RATE)
   cross_entropy = nn.CrossEntropyLoss(ignore_index=TRG_PAD_IDX)
 
+  print(f'The model has {model_utils.count_parameters(model):,} trainable parameters')
+
   trainer = Trainer(
     const=const,
-    model=model,
     optimizer=optimizer,
     criterion=cross_entropy,
+    device=device,
+  )
+
+  trainer.train(
+    model=model,
     train_iterator=train_iterator,
     valid_iterator=valid_iterator,
   )
 
-  trainer.train()
+  model.load_state_dict(torch.load('./checkpoints/model.best.pt'))
+  
+  trainer.test(model=model, test_iterator=test_iterator)
+
+  bleu_score = inference_utils.calculate_bleu(
+    data=test_data,
+    source_field=source,
+    target_field=target,
+    model=model,
+    device=device,
+  )
+
+  print(f'BLEU score = {bleu_score*100:.2f}')

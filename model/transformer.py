@@ -208,12 +208,12 @@ class Transformer(nn.Module):
     self.target_padding_index = target_padding_index
     self.device = device
 
-  def _make_source_mask(self, source):
+  def make_source_mask(self, source):
     # [batch_size, 1, 1, source_len]
     source_mask = (source != self.source_padding_index).unsqueeze(1).unsqueeze(2)
     return source_mask.to(self.device)
 
-  def _make_target_mask(self, target):
+  def make_target_mask(self, target):
     batch_size, target_len = target.shape
     # [batch_size, 1, 1, target_len]
     target_mask = (target != self.target_padding_index).unsqueeze(1).unsqueeze(2)
@@ -224,8 +224,8 @@ class Transformer(nn.Module):
     return target_mask.to(self.device)
 
   def forward(self, source, target):
-    source_mask = self._make_source_mask(source)
-    target_mask = self._make_target_mask(target)
+    source_mask = self.make_source_mask(source)
+    target_mask = self.make_target_mask(target)
     encoder_output = self.encoder(x=source, mask=source_mask)
 
     out = self.decoder(
